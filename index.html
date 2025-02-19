@@ -2,17 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Video Upload</title>
-
-  <!--
-    Minimal reset and style to ensure full-screen black background
-    with a centered circular white button.
-  -->
   <style>
+    /* Reset & basic styling */
     * {
-      margin: 0;
-      padding: 0;
+      margin: 0; 
+      padding: 0; 
       box-sizing: border-box;
     }
 
@@ -20,49 +16,192 @@
       width: 100%;
       height: 100%;
       background-color: #000; /* Black background */
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                   Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top bar with "Go Back" */
+    .top-bar {
+      width: 100%;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      padding: 0 15px;
+      background: rgba(255,255,255,0.05);
+    }
+    .back-button {
+      color: #fff;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .back-button:hover {
+      opacity: 0.8;
+    }
+    .back-button:active {
+      opacity: 0.6;
+    }
+
+    /* Main container for circle + buttons */
+    .main-container {
+      flex: 1; /* take remaining space */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* The big circle container for camera or placeholder */
+    .camera-circle {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background-color: #fff;
+      overflow: hidden; /* so the video is clipped to a circle */
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-bottom: 20px;
+      transition: background-color 0.3s;
     }
-
-    .upload-container {
-      position: relative;
+    /* The actual <video> that appears once Start Estimation is clicked */
+    #videoPreview {
       width: 100%;
       height: 100%;
+      object-fit: cover;
+      display: none; /* hidden initially */
+    }
+
+    /* Buttons under the circle */
+    .buttons-container {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
     }
 
-    .circle-button {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background-color: #fff; /* White button */
-      border: none;
-      outline: none;
-      cursor: pointer;
+    .action-button {
+      background-color: #1c1c1e; /* Dark, Apple-like button */
+      color: #fff;
       font-size: 16px;
-      color: #000;
-      text-align: center;
-      line-height: 100px;
-      transition: transform 0.2s ease;
+      padding: 12px 24px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.2s, transform 0.2s;
     }
-
-    .circle-button:active {
+    .action-button:hover {
+      background-color: #2c2c2e;
+    }
+    .action-button:active {
       transform: scale(0.95);
     }
 
-    /* Hidden file input */
+    /* The hidden file input for uploading videos */
     #videoInput {
       display: none;
+    }
+
+    /* The question mark (?) button at bottom-right */
+    .help-button {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background-color: #1c1c1e;
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    .help-button:hover {
+      background-color: #2c2c2e;
+    }
+    .help-button:active {
+      transform: scale(0.95);
+    }
+
+    /* Modal styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: none; /* hidden by default */
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #fff;
+      color: #000;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .close-modal:hover {
+      color: #444;
+    }
+
+    /* Scrollbar styling for the modal (optional, can remove for default) */
+    .modal-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .modal-content::-webkit-scrollbar-thumb {
+      background-color: #888;
+      border-radius: 3px;
+    }
+    .modal-content::-webkit-scrollbar-track {
+      background-color: #eee;
     }
   </style>
 </head>
 <body>
-  <div class="upload-container">
-    <!-- Hidden file input that we trigger when user clicks the button -->
+  <!-- Top Bar with "Go Back" button -->
+  <div class="top-bar">
+    <button class="back-button" onclick="goBack()">
+      ← Go Back
+    </button>
+  </div>
+
+  <div class="main-container">
+    <!-- The big circular camera area -->
+    <div class="camera-circle" id="cameraCircle">
+      <!-- Video preview (hidden initially) -->
+      <video id="videoPreview" autoplay playsinline></video>
+    </div>
+
+    <!-- Buttons below the circle -->
+    <div class="buttons-container">
+      <button class="action-button" id="startEstimationBtn">Start Estimation</button>
+      <button class="action-button" id="submitBtn">Submit</button>
+    </div>
+
+    <!-- Hidden file input that we trigger when user clicks "Submit" -->
     <input 
       type="file" 
       id="videoInput" 
@@ -70,11 +209,42 @@
       capture="camera" 
     />
 
-    <!-- The big circular button -->
-    <button class="circle-button" id="uploadButton">Upload</button>
+    <!-- The question mark in bottom-right corner -->
+    <button class="help-button" id="helpButton">?</button>
   </div>
 
-  <!-- Include Supabase JS (ESM Import from CDN or local) -->
+  <!-- Modal Overlay for help/info -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <button class="close-modal" id="closeModalBtn">&times;</button>
+      <h2>What We Are Trying To Do</h2>
+      <p>
+        We are asking you to record or upload a video that shows your issue. 
+        We will source quotes for you based on your location and the nature of 
+        the problem. Our AI will describe the issue and specify what is needed. 
+        We simply add a 10% on top of the quote from our qualified suppliers.
+      </p>
+      <p>Below is a list of qualified suppliers:</p>
+      
+      <!-- Replace the large text with your content. For brevity, we show a truncated version here. -->
+      <hr/>
+      <h3>Top-Rated Plumbing Services – Gold Coast, QLD</h3>
+      <p>(… your full table and text about plumbers …)</p>
+      <hr/>
+      <h3>Top-Rated Electrical Services – Gold Coast, QLD</h3>
+      <p>(… your full table and text about electricians …)</p>
+      <hr/>
+      <h3>Top-Rated Air Conditioning Services – Gold Coast, QLD</h3>
+      <p>(… your full table and text about AC services …)</p>
+      <hr/>
+
+      <p style="margin-bottom: 0;">
+        We hope this helps you understand the service. Thank you!
+      </p>
+    </div>
+  </div>
+
+  <!-- Include Supabase JS (ESM Import from CDN) -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -87,24 +257,52 @@
     // Create a single supabase client for interacting with your database
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. Provide the name of the STORAGE BUCKET you want to upload to
-    //    e.g., 'videos' or any bucket you've created in Supabase Storage
+    // Provide the name of the STORAGE BUCKET you want to upload to
     const STORAGE_BUCKET_NAME = 'videos';
 
-    // (Optional) Provide the table name if storing GPS data in a table
-    // e.g. 'video_uploads' or something similar
+    // If storing metadata/coords in a table, specify below
     const TABLE_NAME = 'video_uploads';
 
-    // Grab references to elements
-    const uploadButton = document.getElementById('uploadButton');
+    // References to UI elements
+    const startEstimationBtn = document.getElementById('startEstimationBtn');
+    const submitBtn = document.getElementById('submitBtn');
     const videoInput = document.getElementById('videoInput');
+    const videoPreview = document.getElementById('videoPreview');
+    const cameraCircle = document.getElementById('cameraCircle');
+    const helpButton = document.getElementById('helpButton');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const closeModalBtn = document.getElementById('closeModalBtn');
 
-    // Listen for the button click -> Trigger file input
-    uploadButton.addEventListener('click', () => {
+    let currentStream = null; // store the camera stream
+
+    // "Go Back" button logic
+    window.goBack = function() {
+      window.history.back();
+    };
+
+    // Show the camera feed inside the circle when Start Estimation is clicked
+    startEstimationBtn.addEventListener('click', async () => {
+      // If we already have a stream, do nothing or handle stopping/starting
+      if (currentStream) return;
+
+      try {
+        // Request camera access
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        videoPreview.srcObject = currentStream;
+        videoPreview.style.display = 'block';
+        cameraCircle.style.backgroundColor = '#000'; // so the video stands out
+      } catch (err) {
+        console.error('Could not access camera:', err);
+        alert('Camera access was denied or not available.');
+      }
+    });
+
+    // "Submit" triggers file input
+    submitBtn.addEventListener('click', () => {
       videoInput.click();
     });
 
-    // Listen for when a file is selected
+    // File input change -> upload to Supabase
     videoInput.addEventListener('change', async (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -124,20 +322,24 @@
           alert('Error uploading file: ' + error.message);
           return;
         }
-
         console.log('File uploaded successfully', data);
 
         // 3. (Optional) Store GPS or any metadata in a table
-        //    e.g. storing video URL and coordinates
-        if (position) {
-          const { coords } = position;
+        if (TABLE_NAME) {
+          // Insert location data if we have any
+          let lat = null;
+          let lng = null;
+          if (position && position.coords) {
+            lat = position.coords.latitude;
+            lng = position.coords.longitude;
+          }
 
           const { data: insertData, error: insertError } = await supabase
             .from(TABLE_NAME)
             .insert({
-              video_path: data.path, // The path within the bucket
-              latitude: coords.latitude,
-              longitude: coords.longitude,
+              video_path: data.path,
+              latitude: lat,
+              longitude: lng,
               created_at: new Date().toISOString()
             });
 
@@ -153,32 +355,36 @@
         console.error('Something went wrong:', err);
         alert('Something went wrong: ' + err.message);
       } finally {
-        // Reset the file input
+        // Reset input
         videoInput.value = '';
       }
     });
 
-    /**
-     * Utility function to get the user's location (GPS).
-     * Returns a Promise that resolves with the position or null if denied/unavailable.
-     */
+    // Utility: get location
     function getLocation() {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         if (!('geolocation' in navigator)) {
           console.warn('Geolocation not supported.');
           return resolve(null);
         }
-
         navigator.geolocation.getCurrentPosition(
-          position => resolve(position),
-          error => {
+          (pos) => resolve(pos),
+          (error) => {
             console.warn('Error getting GPS location:', error);
-            resolve(null); // If user denies or there's an error, just proceed with null
+            resolve(null);
           },
           { enableHighAccuracy: true, timeout: 5000 }
         );
       });
     }
+
+    // Show/hide modal
+    helpButton.addEventListener('click', () => {
+      modalOverlay.style.display = 'flex';
+    });
+    closeModalBtn.addEventListener('click', () => {
+      modalOverlay.style.display = 'none';
+    });
   </script>
 </body>
 </html>
